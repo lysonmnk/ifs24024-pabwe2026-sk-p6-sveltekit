@@ -1,24 +1,41 @@
 import { sveltekit } from "@sveltejs/kit/vite";
-import adapter from "@sveltejs/adapter-vercel";
+import bunAdapter from "@sveltejs/adapter-bun";
+import vercelAdapter from "@sveltejs/adapter-vercel";
 import tailwindcss from "@tailwindcss/vite";
 import { svelteTesting } from "@testing-library/svelte/vite";
 import { defineConfig, loadEnv } from "vite";
 import process from "process";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const port = Number(process.env.APP_PORT || env.APP_PORT) || 3005;
+  const isVercel = Boolean(process.env.VERCEL);
 
   return {
     plugins: [
       sveltekit({
-        adapter: adapter({
-          runtime: "nodejs22.x",
-        }),
+        adapter: isVercel
+          ? vercelAdapter()
+          : bunAdapter({
+              envPrefix: "APP_",
+              serverOptions: {
+                port: port,
+              },
+            }),
+        inlineStyleThreshold: 200000,
       }),
       tailwindcss(),
       svelteTesting(),
     ],
+    resolve: {
+      alias: {
+        $lib: path.resolve(__dirname, "src/lib"),
+      },
+    },
     server: {
       port: port,
     },
@@ -30,32 +47,40 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       DELCOM_BASEURL: JSON.stringify(
-        env.VITE_DELCOM_BASEURL || "http://localhost:8000/api/v1",
+        env.VITE_DELCOM_BASEURL || "https://open-api.delcom.org/api/v1"
       ),
+      ...(mode === "test"
+        ? {
+            "import.meta.env.VITE_DELCOM_BASEURL": JSON.stringify(
+              "https://open-api.delcom.org/api/v1"
+            ),
+          }
+        : {}),
     },
     test: {
       globals: true,
       environment: "jsdom",
       setupFiles: "./src/setupTests.ts",
+      include: ["src/**/*.{test,spec}.{js,ts}"],
       coverage: {
         provider: "v8",
-        reporter: ["text", "json", "html", "lcov"],
-        include: ["src/**/*.{js,ts,svelte}"],
+        reporter: ["text", "json", "html"],
+        include: ["src/**/*.{ts,svelte}"],
         exclude: [
-          "src/app.d.ts",
-          "src/env.d.ts",
+          "node_modules/",
           "src/setupTests.ts",
           "src/test-utils.ts",
-          "**/*.test.{js,ts}",
-          "node_modules/**",
-          ".svelte-kit/**",
-          ".docs/**",
+          "src/tests/**",
+          "src/features/**/types.ts",
+          "src/routes/**/+error.svelte",
+          "src/routes/**/+server.ts",
+          "**/*.d.ts",
         ],
         thresholds: {
-          lines: 100,
-          functions: 100,
-          branches: 100,
           statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
         },
       },
     },

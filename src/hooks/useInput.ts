@@ -1,10 +1,19 @@
-import { writable } from "svelte/store";
+import { writable, type Writable } from "svelte/store";
 
-/** Hook input formulir berbasis Svelte store. */
-export function useInput(initialValue = "") {
-  const value = writable(initialValue);
-  const onChange = (event: Event) =>
-    value.set((event.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value);
-  const reset = () => value.set(initialValue);
-  return { value, onChange, reset };
+export interface UseInput {
+  value: Writable<string>;
+  onInput: (event: Event) => void;
+  set: (next: string) => void;
+  reset: () => void;
+}
+
+/** Hook sederhana untuk mengelola nilai input formulir sebagai store. */
+export function useInput(initial = ""): UseInput {
+  const value = writable(initial);
+  return {
+    value,
+    onInput: (event) => value.set((event.target as HTMLInputElement).value),
+    set: (next) => value.set(next),
+    reset: () => value.set(initial),
+  };
 }

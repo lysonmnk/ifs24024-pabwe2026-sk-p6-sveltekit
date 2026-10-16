@@ -1,1 +1,9 @@
-declare const DELCOM_BASEURL: string;
+/// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  readonly VITE_DELCOM_BASEURL: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

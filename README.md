@@ -1,20 +1,17 @@
-# Delcom Courses (SvelteKit + TypeScript) — Studi Kasus 2, PABWE P6
+# Delcom Courses (SvelteKit 3 + Svelte 5 + TypeScript)
 
-Aplikasi kursus: autentikasi, CRUD kursus (judul, deskripsi, sampul), peserta (daftar/keluar), rating 1-5,
-konten video YouTube dengan status belajar, daftar pengguna, dan profil. Memakai REST API Delcom.
+Aplikasi kursus berbasis Delcom Open API (https://open-api.delcom.org/docs/1.0/api-courses).
 
 ## Menjalankan
 ```bash
 bun install
-bun run dev              # http://localhost:3005
-bun run test:coverage    # coverage 100% (lines, functions, branches, statements)
-bun run build && bun run start
+bun run dev            # http://localhost:3005
+bun run build && bun start
+bun run test:coverage  # threshold 100%
 ```
-Atur `VITE_DELCOM_BASEURL` dan `APP_PORT` pada `.env`.
+`.env`: `VITE_DELCOM_BASEURL=https://open-api.delcom.org/api/v1`, `APP_PORT=3005`.
 
-## Endpoint yang dipakai (src/features/courses/api/courseApi.ts)
-`/courses` (GET, POST, DELETE semua), `/courses/:id` (GET, PUT, DELETE), `/courses/:id/cover` (POST, field `cover`),
-`/courses/:id/students` (POST daftar, DELETE keluar), `/courses/:id/ratings` (POST `{rating}`),
-`/courses/:id/contents` (POST `{title, youtube}`), `/courses/-/contents/:contentId` (GET, PUT, DELETE),
-`/courses/-/contents/:contentId/learns` (PUT `{status: 0|1}`).
-Bila nama field/endpoint di dokumentasi API berbeda, cukup ubah file API tersebut.
+## Catatan teknis
+- SvelteKit 3 tidak lagi memakai `svelte.config.js`; adapter (`@sveltejs/adapter-bun`) diatur di `vite.config.ts`.
+- `svelte-adapter-bun` (pihak ketiga) tidak kompatibel dengan Kit 3, maka dipakai adapter resmi.
+- Mutasi menyalakan bendera di `coursesStore`; halaman memuat ulang data saat bendera menyala.

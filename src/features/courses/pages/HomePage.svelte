@@ -1,88 +1,115 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { GraduationCap, Plus, Trash2 } from "lucide-svelte";
-  import AddModal from "../modals/AddModal.svelte";
-  import { courses, loadCourses, removeCourse, removeAllCourses } from "../states/coursesStore";
-  import { profile } from "../../users/states/usersStore";
-  import { handleResult, showConfirmDialog } from "../../../helpers/toolsHelper";
+  import { untrack } from "svelte";
+  import { Plus, Search, Trash2 } from "lucide-svelte";
+  import { confirmAction, matchesQuery } from "../../../helpers/toolsHelper";
+  import { authStore } from "../../auth/states/authStore";
+  import AddModal from "../components/AddModal.svelte";
+  import CourseCard from "../components/CourseCard.svelte";
+  import {
+    clearMutations,
+    coursesStore,
+    loadCourses,
+    removeAllCourses,
+    removeCourse,
+  } from "../states/coursesStore";
+  import type { CourseSummary } from "../types";
 
-  let search = $state("");
+  let query = $state("");
   let onlyMine = $state(false);
   let showAdd = $state(false);
 
-  const noop = () => {};
-  const isMine = (item: any) => item.user_id === ($profile || {}).id;
-
-  const filtered = $derived(
-    $courses.filter(
-      (item) =>
-        item.title.toLowerCase().includes(search.toLowerCase()) && (!onlyMine || isMine(item))
-    )
+  const myId = $derived($authStore.profile?.id);
+  const visible = $derived(
+    $coursesStore.courses.filter((course) =>
+      matchesQuery(query, course.title, course.description, course.author.name),
+    ),
   );
+  const hasMine = $derived($coursesStore.courses.some((course) => course.user_id === myId));
 
-  onMount(() => {
-    loadCourses();
+  $effect(() => {
+    const mine = onlyMine;
+    untrack(() => void loadCourses(mine));
   });
 
-  async function remove(item: any) {
-    if (await showConfirmDialog(`Hapus kursus "${item.title}"?`)) {
-      await handleResult(await removeCourse(item.id), noop);
+  $effect(() => {
+    const { course, cover, student } = $coursesStore.flags;
+    if (course || cover || student) {
+      clearMutations();
+      untrack(() => void loadCourses(onlyMine));
     }
+  });
+
+  async function remove(course: CourseSummary) {
+    if (confirmAction(`Hapus kursus "${course.title}"?`)) await removeCourse(course.id);
   }
 
   async function removeAll() {
-    if (await showConfirmDialog("Hapus semua kursus? Tindakan ini tidak dapat dibatalkan.")) {
-      await handleResult(await removeAllCourses(), noop);
+    if (confirmAction("Hapus semua kursus yang Anda buat? Tindakan ini tidak dapat dibatalkan.")) {
+      await removeAllCourses();
     }
   }
 </script>
 
-<section class="space-y-5">
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <h1 class="text-xl font-bold">Semua Kursus</h1>
-    <div class="flex gap-2">
-      <button type="button" onclick={removeAll}
-        class="flex items-center gap-1 rounded-lg border border-red-200 text-red-600 px-3 py-2 text-sm font-semibold">
-        <Trash2 size={16} /> Hapus semua
-      </button>
-      <button type="button" onclick={() => (showAdd = true)}
-        class="flex items-center gap-1 rounded-lg bg-indigo-600 text-white px-3 py-2 text-sm font-semibold">
-        <Plus size={16} /> Tambah
+<section class="mx-auto max-w-6xl">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold">Semua Kursus</h1>
+      <p class="mt-1 text-sm text-ink-500">Pilih kursus untuk dipelajari, atau buat kursus sendiri.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {#if hasMine}
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-medium text-red-700 hover:bg-red-50"
+          onclick={removeAll}
+        >
+          <Trash2 size={16} /> Hapus semua kursus saya
+        </button>
+      {/if}
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-xl bg-ink-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-ink-700"
+        onclick={() => (showAdd = true)}
+      >
+        <Plus size={16} /> Tambah kursus
       </button>
     </div>
   </div>
 
-  <div class="flex flex-wrap items-center gap-3">
-    <input type="search" placeholder="Cari kursus..." bind:value={search} aria-label="Cari"
-      class="flex-1 min-w-48 rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-    <label class="flex items-center gap-2 text-sm" for="only-mine">
-      <input id="only-mine" type="checkbox" bind:checked={onlyMine} /> Milik saya
+  <div class="mt-6 flex flex-wrap items-center gap-4">
+    <label class="relative min-w-60 flex-1">
+      <span class="sr-only">Cari kursus</span>
+      <Search size={16} class="absolute top-1/2 left-3 -translate-y-1/2 text-ink-500" />
+      <input
+        type="search"
+        placeholder="Cari judul, deskripsi, atau pengajar"
+        bind:value={query}
+        class="w-full rounded-xl border border-ink-200 bg-white py-2.5 pr-3 pl-9"
+      />
+    </label>
+    <label class="inline-flex items-center gap-2 text-sm font-medium">
+      <input type="checkbox" bind:checked={onlyMine} class="size-4 accent-ink-800" />
+      Hanya milik saya
     </label>
   </div>
 
-  {#if filtered.length === 0}
-    <p class="text-slate-500" data-testid="empty">Tidak ada kursus.</p>
+  {#if $coursesStore.loading && $coursesStore.courses.length === 0}
+    <p class="mt-10 text-ink-500" role="status">Memuat kursus...</p>
+  {:else if $coursesStore.error}
+    <p class="mt-10 rounded-xl bg-red-50 p-4 text-red-800" role="alert">{$coursesStore.error}</p>
+  {:else if visible.length === 0}
+    <p class="mt-10 text-ink-500">
+      {query ? "Tidak ada kursus yang cocok dengan pencarian." : "Belum ada kursus. Tambahkan yang pertama."}
+    </p>
   {:else}
-    <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {#each filtered as item (item.id)}
-        <li class="bg-white border border-slate-200 rounded-2xl overflow-hidden" data-testid="card">
-          {#if item.cover}
-            <img src={item.cover} alt={item.title} class="h-32 w-full object-cover" />
-          {:else}
-            <div class="h-32 flex items-center justify-center bg-indigo-50 text-indigo-400"><GraduationCap size={36} /></div>
-          {/if}
-          <div class="p-4 space-y-2">
-            <a href={`/courses/${item.id}`} class="block font-bold truncate hover:text-indigo-600">{item.title}</a>
-            <p class="text-sm text-slate-500 line-clamp-2">{item.description}</p>
-            <button type="button" onclick={() => remove(item)} aria-label={`Hapus ${item.title}`}
-              class="text-red-700 text-sm flex items-center gap-1"><Trash2 size={14} /> Hapus</button>
-          </div>
-        </li>
+    <div class="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+      {#each visible as course (course.id)}
+        <CourseCard {course} {myId} ondelete={remove} />
       {/each}
-    </ul>
+    </div>
   {/if}
 </section>
 
 {#if showAdd}
-  <AddModal onClose={() => (showAdd = false)} />
+  <AddModal onclose={() => (showAdd = false)} />
 {/if}

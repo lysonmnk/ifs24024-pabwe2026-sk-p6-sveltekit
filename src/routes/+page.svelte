@@ -2,4 +2,5 @@
   import HomePage from "../features/courses/pages/HomePage.svelte";
 </script>
 
-<HomePage />
+<svelte:head><title>Semua Kursus · Delcom Courses</title></svelte:head>
+<HomePage />bun run build

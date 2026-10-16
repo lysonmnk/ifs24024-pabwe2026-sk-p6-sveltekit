@@ -2,13 +2,15 @@
 <html lang="id">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-    <meta name="description" content="Delcom Courses: ikuti kursus video, beri rating, dan pantau kemajuan belajarmu." />
+    <link rel="icon" href="%sveltekit.assets%/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Delcom Courses</title>
+    <meta
+      name="description"
+      content="Delcom Courses: platform kursus untuk mengelola kursus, materi, dan rating."
+    />
     %sveltekit.head%
   </head>
-  <body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen">
+  <body data-sveltekit-preload-data="hover">
     <div style="display: contents">%sveltekit.body%</div>
   </body>
 </html>

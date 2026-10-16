@@ -1,47 +1,58 @@
-import { writable, type Writable } from "svelte/store";
-import * as api from "../api/usersApi";
-import { isSuccess } from "../../../helpers/apiHelper";
+import { writable } from "svelte/store";
+import { getErrorMessage, type ApiResponse } from "../../../helpers/apiHelper";
+import { notify } from "../../../states/toastStore";
+import { loadProfile, setProfile } from "../../auth/states/authStore";
+import { userApi } from "../api/userApi";
+import type { User } from "../types";
 
-export const users = writable<any[]>([]);
-export const profile = writable<any>(null);
-export const isProfileUpdated = writable(false);
-export const isPhotoUpdated = writable(false);
-export const isPasswordChanged = writable(false);
-
-export async function loadUsers() {
-  const res = await api.getUsers();
-  users.set(isSuccess(res) ? res.data.users : []);
-  return res;
+export interface UsersState {
+  users: User[];
+  loading: boolean;
+  error: string | null;
 }
 
-export async function loadProfile() {
-  const res = await api.getMe();
-  profile.set(isSuccess(res) ? res.data.user : null);
-  return res;
-}
+export const usersStore = writable<UsersState>({ users: [], loading: false, error: null });
 
-async function mutate(call: () => Promise<any>, flag: Writable<boolean>) {
-  const res = await call();
-  if (isSuccess(res)) {
-    flag.set(true);
-    await loadProfile();
+export async function loadUsers(): Promise<boolean> {
+  usersStore.update((s) => ({ ...s, loading: true, error: null }));
+  const response = await userApi.getUsers();
+  if (response.status === "success" && response.data) {
+    usersStore.set({ users: response.data.users, loading: false, error: null });
+    return true;
   }
-  return res;
+  usersStore.update((s) => ({ ...s, loading: false, error: getErrorMessage(response) }));
+  return false;
 }
 
-export const updateProfile = (data: { name: string; email: string }) => mutate(() => api.putMe(data), isProfileUpdated);
-export const updatePhoto = (file: File) => mutate(() => api.postPhoto(file), isPhotoUpdated);
-
-export async function changePassword(data: { password: string; new_password: string }) {
-  const res = await api.putPassword(data);
-  if (isSuccess(res)) isPasswordChanged.set(true);
-  return res;
+function report(response: ApiResponse<any>): boolean {
+  const ok = response.status === "success";
+  notify(ok ? "success" : "error", ok ? response.message : getErrorMessage(response));
+  return ok;
 }
 
-export function resetUsers() {
-  users.set([]);
-  profile.set(null);
-  isProfileUpdated.set(false);
-  isPhotoUpdated.set(false);
-  isPasswordChanged.set(false);
+export async function saveProfile(name: string, email: string): Promise<boolean> {
+  const response = await userApi.updateProfile({ name, email });
+  const ok = report(response);
+  if (ok && response.data) setProfile(response.data.user);
+  return ok;
+}
+
+export async function savePhoto(photo: File): Promise<boolean> {
+  const ok = report(await userApi.changePhoto(photo));
+  if (ok) await loadProfile();
+  return ok;
+}
+
+export async function savePassword(
+  password: string,
+  newPassword: string,
+  confirmation: string,
+): Promise<boolean> {
+  return report(
+    await userApi.changePassword({
+      password,
+      new_password: newPassword,
+      new_password_confirmation: confirmation,
+    }),
+  );
 }

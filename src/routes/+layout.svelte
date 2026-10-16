@@ -1,24 +1,19 @@
 <script lang="ts">
-  import "../index.css";
+  import "../app.css";
   import { page } from "$app/state";
-  import { goto } from "$app/navigation";
+  import type { Snippet } from "svelte";
+  import ToastHost from "../components/ToastHost.svelte";
   import CourseLayout from "../features/courses/layouts/CourseLayout.svelte";
-  import { authToken } from "../features/auth/states/authStore";
+  import "@fontsource-variable/plus-jakarta-sans";
 
-  let { children } = $props();
-
+  let { children }: { children: Snippet } = $props();
   const isAuthRoute = $derived(page.url.pathname.startsWith("/auth"));
-
-  // Halaman selain /auth membutuhkan token.
-  $effect(() => {
-    if (!isAuthRoute && !$authToken) goto("/auth/login", { replaceState: true });
-  });
 </script>
 
 {#if isAuthRoute}
   {@render children()}
 {:else}
-  <CourseLayout>
-    {@render children()}
-  </CourseLayout>
+  <CourseLayout>{@render children()}</CourseLayout>
 {/if}
+
+<ToastHost />

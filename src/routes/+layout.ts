@@ -1,2 +1,3 @@
-// Aplikasi berjalan sebagai SPA: token tersimpan di localStorage sehingga tidak ada SSR.
+// Aplikasi ini dirender di sisi klien: token sesi disimpan di localStorage.
 export const ssr = false;
+export const prerender = false;

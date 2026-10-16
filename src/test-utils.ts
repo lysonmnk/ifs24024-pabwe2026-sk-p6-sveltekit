@@ -1,70 +1,144 @@
 import { render } from "@testing-library/svelte";
-import { vi } from "vitest";
-import { createRawSnippet } from "svelte";
-import { page } from "$app/state";
-import { goto } from "$app/navigation";
-import { authToken, isAuthLogin, isAuthRegister } from "./features/auth/states/authStore";
-import { profile, resetUsers } from "./features/users/states/usersStore";
-import { resetCourses } from "./features/courses/states/coursesStore";
+import { authStore } from "./features/auth/states/authStore";
+import { usersStore } from "./features/users/states/usersStore";
+import { coursesStore } from "./features/courses/states/coursesStore";
+import { mockPageStore, mockGoto, updateMockPage } from "./setupTests";
 
-export function setPage(pathname = "/", params: Record<string, string> = {}) {
-  (page as any).url.pathname = pathname;
-  (page as any).params = params;
-}
+export function setupMockStores(initialState: Record<string, any> = {}) {
+  if (typeof (authStore as any).reset === "function") {
+    (authStore as any).reset();
+  }
+  if (typeof (usersStore as any).reset === "function") {
+    (usersStore as any).reset();
+  }
+  if (typeof (coursesStore as any).reset === "function") {
+    (coursesStore as any).reset();
+  }
 
-export function resetAllStores() {
-  localStorage.clear();
-  authToken.set(null);
-  isAuthLogin.set(false);
-  isAuthRegister.set(false);
-  resetUsers();
-  resetCourses();
-  setPage("/", {});
-  vi.mocked(goto).mockClear();
-}
-
-/** Render komponen Svelte setelah store direset dan diisi sesuai opsi. */
-export function renderWithProviders(
-  Component: any,
-  props: Record<string, unknown> = {},
-  { token = null, user = null }: { token?: string | null; user?: any } = {}
-) {
-  resetAllStores();
-  if (token) authToken.set(token);
-  if (user) profile.set(user);
-  return render(Component, { props });
-}
-
-export const okResponse = (data: any = {}, message = "OK") => ({ status: "success", message, data });
-export const failResponse = (message = "Gagal") => ({ status: "fail", message });
-
-/** Mock fetch berdasarkan kunci "METHOD /path". */
-export function mockApi(routes: Record<string, any> = {}) {
-  const fn = vi.fn(async (url: string, options: any = {}) => {
-    const path = String(url).replace(DELCOM_BASEURL, "");
-    const key = `${options.method || "GET"} ${path}`;
-    const handler = routes[key];
-    const body =
-      typeof handler === "function" ? handler(options) : (handler ?? failResponse(`Tidak di-mock: ${key}`));
-    return { json: async () => body };
+  Object.entries(initialState).forEach(([key, val]) => {
+    if ((authStore as any).$state && key in (authStore as any).$state) {
+      (authStore as any).$state[key] = val;
+      const setter = `set${key.charAt(0).toUpperCase() + key.slice(1)}`;
+      if (typeof (authStore as any)[setter] === "function") {
+        (authStore as any)[setter](val);
+      }
+    }
+    if ((usersStore as any).$state && key in (usersStore as any).$state) {
+      (usersStore as any).$state[key] = val;
+      const setter = `set${key.charAt(0).toUpperCase() + key.slice(1)}`;
+      if (typeof (usersStore as any)[setter] === "function") {
+        (usersStore as any)[setter](val);
+      }
+    }
+    if ((coursesStore as any).$state && key in (coursesStore as any).$state) {
+      (coursesStore as any).$state[key] = val;
+      const setter = `set${key.charAt(0).toUpperCase() + key.slice(1)}`;
+      if (typeof (coursesStore as any)[setter] === "function") {
+        (coursesStore as any)[setter](val);
+      }
+    }
   });
-  globalThis.fetch = fn as any;
-  return fn;
+
+  return { authStore, usersStore, coursesStore, todosStore: coursesStore };
 }
 
-export const snippet = (html = "<p>anak</p>") => createRawSnippet(() => ({ render: () => html }));
+export function createMockPinia(initialState: Record<string, any> = {}) {
+  return setupMockStores(initialState);
+}
 
-export const sampleUser = { id: "u1", name: "Dian", email: "dian@example.com", photo: null };
-export const sampleCourse = {
-  id: "c1",
-  user_id: "u1",
-  title: "Dasar Svelte",
-  description: "Belajar Svelte dari nol",
-  cover: null,
-  students: [{ id: "u2", name: "Budi" }],
-  ratings: [{ rating: 4 }, { rating: 5 }],
-  contents: [
-    { id: "k1", title: "Pengantar", youtube: "https://youtu.be/dQw4w9WgXcQ", status: 0 },
-    { id: "k2", title: "Rune", youtube: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", status: 1 },
-  ],
-};
+export interface RenderWithProvidersOptions {
+  props?: Record<string, any>;
+  preloadedState?: Record<string, any>;
+  route?: string;
+  pinia?: any;
+  [key: string]: any;
+}
+
+export function renderWithProviders(
+  component: any,
+  {
+    props = {},
+    preloadedState = {},
+    route = "/",
+    ...options
+  }: RenderWithProvidersOptions = {}
+) {
+  const { authStore: a, usersStore: u, coursesStore: c } = setupMockStores(preloadedState);
+  if (route) {
+    const url = new URL(route, "http://localhost:3005");
+    updateMockPage({
+      url,
+      params: {},
+      route: { id: url.pathname },
+      status: 200,
+      error: null,
+      data: {},
+      form: undefined,
+    });
+  }
+
+  const result = render(component, { props, ...options });
+
+  const createWrapperElement = (el: Element | null): any => {
+    if (!el) {
+      return {
+        exists: () => false,
+        element: null,
+        trigger: async () => {},
+        setValue: async () => {},
+        text: () => "",
+        attributes: () => undefined,
+        find: () => createWrapperElement(null),
+        findAll: () => [],
+      };
+    }
+    return {
+      exists: () => true,
+      element: el,
+      trigger: async (event: string, eventInit: any = {}) => {
+        let ev: Event;
+        if (event.startsWith("key")) {
+          ev = new KeyboardEvent(event, { bubbles: true, cancelable: true, ...eventInit });
+        } else if (event.startsWith("mouse") || event === "click") {
+          ev = new MouseEvent(event, { bubbles: true, cancelable: true, ...eventInit });
+        } else {
+          ev = new CustomEvent(event, { bubbles: true, cancelable: true, detail: eventInit });
+        }
+        el.dispatchEvent(ev);
+        await new Promise((r) => setTimeout(r, 0));
+      },
+      setValue: async (value: string) => {
+        (el as HTMLInputElement).value = value;
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+        await new Promise((r) => setTimeout(r, 0));
+      },
+      text: () => el.textContent || "",
+      attributes: (attr: string) => el.getAttribute(attr),
+      find: (sel: string) => createWrapperElement(el.querySelector(sel)),
+      findAll: (sel: string) => Array.from(el.querySelectorAll(sel)).map(createWrapperElement),
+    };
+  };
+
+  const wrapper = {
+    exists: () => !!result.container.firstElementChild,
+    element: result.container.firstElementChild,
+    text: () => result.container.textContent || "",
+    html: () => result.container.innerHTML,
+    find: (selector: string) => createWrapperElement(result.container.querySelector(selector)),
+    findAll: (selector: string) =>
+      Array.from(result.container.querySelectorAll(selector)).map(createWrapperElement),
+    unmount: result.unmount,
+  };
+
+  return {
+    ...result,
+    wrapper,
+    authStore: a,
+    usersStore: u,
+    coursesStore: c,
+    todosStore: c,
+    mockPageStore,
+    mockGoto,
+  };
+}

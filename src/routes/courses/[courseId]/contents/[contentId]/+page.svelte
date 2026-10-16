@@ -6,6 +6,5 @@
   const contentId = $derived(page.params.contentId);
 </script>
 
-{#key contentId}
-  <ContentPage {courseId} {contentId} />
-{/key}
+<svelte:head><title>Materi · Delcom Courses</title></svelte:head>
+<ContentPage courseId={Number(courseId)} contentId={Number(contentId)} />

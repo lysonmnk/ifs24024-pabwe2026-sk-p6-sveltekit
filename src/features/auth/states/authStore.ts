@@ -1,41 +1,64 @@
 import { writable } from "svelte/store";
-import * as api from "../api/authApi";
-import {
-  getAccessToken,
-  putAccessToken,
-  removeAccessToken,
-  isSuccess,
-} from "../../../helpers/apiHelper";
-import { loadProfile, resetUsers } from "../../users/states/usersStore";
+import { clearToken, getErrorMessage, getToken, setToken } from "../../../helpers/apiHelper";
+import { notify } from "../../../states/toastStore";
+import { userApi } from "../../users/api/userApi";
+import type { User } from "../../users/types";
+import { authApi } from "../api/authApi";
 
-export const authToken = writable<string | null>(getAccessToken());
-export const isAuthLogin = writable(false);
-export const isAuthRegister = writable(false);
+export interface AuthState {
+  token: string | null;
+  profile: User | null;
+  loading: boolean;
+}
 
-export async function login(email: string, password: string) {
-  const res = await api.postLogin({ email, password });
-  if (isSuccess(res)) {
-    putAccessToken(res.data.token);
-    authToken.set(res.data.token);
-    isAuthLogin.set(true);
-    const profileRes = await loadProfile();
-    if (!isSuccess(profileRes)) {
-      logout();
-      return profileRes;
-    }
+export const authStore = writable<AuthState>({ token: getToken(), profile: null, loading: false });
+
+const patch = (partial: Partial<AuthState>) => authStore.update((s) => ({ ...s, ...partial }));
+
+/** Memuat profil pengguna yang sedang login. Token dihapus bila sesi tidak valid. */
+export async function loadProfile(): Promise<boolean> {
+  patch({ loading: true });
+  const response = await userApi.getProfile();
+  if (response.status === "success" && response.data) {
+    patch({ profile: response.data.user, loading: false });
+    return true;
   }
-  return res;
+  clearToken();
+  authStore.set({ token: null, profile: null, loading: false });
+  return false;
 }
 
-export async function register(name: string, email: string, password: string) {
-  const res = await api.postRegister({ name, email, password });
-  if (isSuccess(res)) isAuthRegister.set(true);
-  return res;
+export async function login(email: string, password: string): Promise<boolean> {
+  patch({ loading: true });
+  const response = await authApi.login({ email, password });
+  if (response.status !== "success" || !response.data) {
+    patch({ loading: false });
+    notify("error", getErrorMessage(response));
+    return false;
+  }
+  setToken(response.data.token);
+  patch({ token: response.data.token });
+  const loaded = await loadProfile();
+  notify(loaded ? "success" : "error", loaded ? response.message : "Gagal memuat profil pengguna");
+  return loaded;
 }
 
-export function logout() {
-  removeAccessToken();
-  authToken.set(null);
-  isAuthLogin.set(false);
-  resetUsers();
+export async function register(name: string, email: string, password: string): Promise<boolean> {
+  patch({ loading: true });
+  const response = await authApi.register({ name, email, password });
+  patch({ loading: false });
+  const ok = response.status === "success";
+  notify(ok ? "success" : "error", ok ? response.message : getErrorMessage(response));
+  return ok;
+}
+
+export async function logout(): Promise<void> {
+  await authApi.logout();
+  clearToken();
+  authStore.set({ token: null, profile: null, loading: false });
+  notify("info", "Anda telah keluar");
+}
+
+export function setProfile(profile: User): void {
+  patch({ profile });
 }

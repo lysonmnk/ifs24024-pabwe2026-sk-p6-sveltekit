@@ -1,24 +1,8 @@
 {
   "extends": "$app/tsconfig",
   "compilerOptions": {
-    "allowJs": true,
-    "checkJs": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "sourceMap": true,
-    "strict": false,
-    "types": ["$app/types", "vitest/globals", "@testing-library/jest-dom"],
-    "moduleResolution": "bundler"
+    "types": ["$app/types", "bun", "vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": [
-    "src",
-    "test",
-    "*"
-  ],
-  "exclude": [
-    "src/service-worker",
-    "src/**/*.test.ts"
-  ]
+  "include": ["src", "*.ts", "*.js"],
+  "exclude": ["src/service-worker"]
 }

@@ -1,53 +1,50 @@
-import Swal from "sweetalert2";
-import clsx, { type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { getBaseUrl } from "./apiHelper";
 
-const dialog = (icon: "success" | "error" | "warning", title: string, text: string) =>
-  Swal.fire({ icon, title, text, confirmButtonColor: "#4f46e5" });
-
-export const showSuccessDialog = (message: string) => dialog("success", "Berhasil", message);
-export const showErrorDialog = (message: string) => dialog("error", "Gagal", message);
-export const showWarningDialog = (message: string) => dialog("warning", "Perhatian", message);
-
-export async function showConfirmDialog(message: string) {
-  const result = await Swal.fire({
-    icon: "warning",
-    title: "Konfirmasi",
-    text: message,
-    showCancelButton: true,
-    confirmButtonText: "Ya",
-    cancelButtonText: "Batal",
-    confirmButtonColor: "#4f46e5",
-  });
-  return result.isConfirmed;
+export function formatDate(iso?: string | null): string {
+  if (!iso) return "-";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
-/** Tampilkan dialog sesuai hasil API; jalankan onSuccess bila berhasil. */
-export async function handleResult(
-  response: { status: string; message: string },
-  onSuccess: () => void
-) {
-  if (response.status === "success") {
-    await showSuccessDialog(response.message);
-    onSuccess();
-    return true;
-  }
-  await showErrorDialog(response.message);
-  return false;
+export function getYoutubeId(url: string): string | null {
+  const pattern =
+    /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})(?:[?&#/].*)?$/;
+  return pattern.exec(url.trim())?.[1] ?? null;
 }
 
-export function formatDate(value: string) {
-  return new Date(value).toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+export function formatRating(value?: string | number | null): string {
+  if (value === null || value === undefined || value === "") return "Belum ada rating";
+  const number = Number(value);
+  return Number.isNaN(number) ? "Belum ada rating" : number.toFixed(1);
 }
 
-export const cn = (...inputs: ClassValue[]) => twMerge(clsx(inputs));
+export function formatPercent(value?: string | number | null): number {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(100, Math.max(0, Math.round(number))) : 0;
+}
 
-/** Ambil ID video dari tautan YouTube (watch, youtu.be, embed); string kosong bila tidak valid. */
-export function getYoutubeId(url: string): string {
-  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/);
-  return match ? match[1] : "";
+export function confirmAction(message: string): boolean {
+  return window.confirm(message);
+}
+
+export function initials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
+}
+
+/** Foto profil dapat berupa URL penuh atau jalur relatif (mis. `img/profile/1.png`). */
+export function resolveAsset(path?: string | null): string {
+  if (!path) return "";
+  if (/^https?:\/\//.test(path)) return path;
+  return `${new URL(getBaseUrl()).origin}/${path.replace(/^\/+/, "")}`;
+}
+
+export function matchesQuery(query: string, ...fields: string[]): boolean {
+  const needle = query.trim().toLowerCase();
+  return needle === "" || fields.some((field) => field.toLowerCase().includes(needle));
 }
