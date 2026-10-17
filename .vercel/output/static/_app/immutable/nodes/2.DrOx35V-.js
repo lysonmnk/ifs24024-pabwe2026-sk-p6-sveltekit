@@ -1,0 +1,1 @@
+import{E as e,M as t,Z as n,j as r}from"../chunks/DNisB8-5.js";function i(i,a){var o=t(),s=n(o);e(s,()=>a.children),r(i,o)}export{i as component};

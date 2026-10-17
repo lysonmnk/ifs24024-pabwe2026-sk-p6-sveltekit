@@ -1,0 +1,10 @@
+{
+	"runtime": "bun1.4.x",
+	"handler": "..\\..\\..\\..\\..\\..\\..\\..\\..\\..\\Users\\lyson\\OneDrive\\Documents\\SEM_V\\PABWE\\pratikum\\ifs24024-pabwe2026-sk-p6-sveltekit\\ifs24024-pabwe2026-sk-p6-sveltekit\\.svelte-kit\\vercel-tmp\\index.js",
+	"launcherType": "Nodejs",
+	"experimentalResponseStreaming": true,
+	"framework": {
+		"slug": "sveltekit",
+		"version": "3.0.1"
+	}
+}
