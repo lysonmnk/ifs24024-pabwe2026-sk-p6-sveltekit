@@ -1,1 +1,0 @@
-import{c as e}from"./DNisB8-5.js";import"./CsuOdYkv.js";function t(t=``){let n=e(t);return{value:n,onInput:e=>n.set(e.target.value),set:e=>n.set(e),reset:()=>n.set(t)}}export{t};
