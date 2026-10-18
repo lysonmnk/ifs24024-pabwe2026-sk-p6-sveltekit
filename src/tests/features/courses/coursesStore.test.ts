@@ -35,6 +35,19 @@ describe("normalisasi data", () => {
   });
 
   it("normalizeSummary mengisi bidang yang hilang", () => {
+    expect(normalizeSummary({})).toEqual({
+      id: 0,
+      user_id: 0,
+      title: "",
+      cover: null,
+      description: "",
+      created_at: "",
+      updated_at: "",
+      author: { name: "Tidak diketahui", photo: null },
+      students: [],
+      total_contents: 0,
+      avg_ratings: null,
+    });
     expect(normalizeSummary({ id: 1, user_id: 2 })).toEqual({
       id: 1,
       user_id: 2,

@@ -51,8 +51,8 @@ describe("toolsHelper", () => {
     expect(formatPercent(-5)).toBe(0);
   });
 
-  it("confirmAction meneruskan ke window.confirm", () => {
-    const spy = vi.spyOn(window, "confirm").mockReturnValue(true);
+  it("confirmAction meneruskan ke globalThis.confirm", () => {
+    const spy = vi.spyOn(globalThis, "confirm").mockReturnValue(true);
     expect(confirmAction("Yakin?")).toBe(true);
     expect(spy).toHaveBeenCalledWith("Yakin?");
     spy.mockRestore();

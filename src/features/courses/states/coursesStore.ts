@@ -49,8 +49,8 @@ const patch = (partial: Partial<CoursesState>) =>
 /** Melengkapi bidang yang mungkin tidak dikirim server agar antarmuka tidak rusak. */
 export function normalizeSummary(raw: Partial<CourseSummary>): CourseSummary {
   return {
-    id: raw.id!,
-    user_id: raw.user_id!,
+    id: raw.id ?? 0,
+    user_id: raw.user_id ?? 0,
     title: raw.title ?? "",
     cover: raw.cover ?? null,
     description: raw.description ?? "",

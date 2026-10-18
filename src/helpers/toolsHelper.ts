@@ -7,10 +7,15 @@ export function formatDate(iso?: string | null): string {
   return date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
+const SHORT_YOUTUBE_REGEX = /^(?:https?:\/\/)?(?:www\.)?youtu\.be\/([\w-]{11})(?:[?#/].*)?$/;
+const LONG_YOUTUBE_REGEX =
+  /^(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/|live\/)([\w-]{11})(?:[?&#/].*)?$/;
+
 export function getYoutubeId(url: string): string | null {
-  const pattern =
-    /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})(?:[?&#/].*)?$/;
-  return pattern.exec(url.trim())?.[1] ?? null;
+  const clean = url.trim();
+  const shortMatch = SHORT_YOUTUBE_REGEX.exec(clean);
+  if (shortMatch) return shortMatch[1];
+  return LONG_YOUTUBE_REGEX.exec(clean)?.[1] ?? null;
 }
 
 export function formatRating(value?: string | number | null): string {
@@ -25,7 +30,7 @@ export function formatPercent(value?: string | number | null): number {
 }
 
 export function confirmAction(message: string): boolean {
-  return window.confirm(message);
+  return globalThis.confirm(message);
 }
 
 export function initials(name: string): string {

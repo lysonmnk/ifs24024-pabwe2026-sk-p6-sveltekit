@@ -28,7 +28,8 @@ function buildUrl(path: string, query?: RequestOptions["query"]): string {
     if (value !== undefined) params.set(key, String(value));
   }
   const qs = params.toString();
-  return `${getBaseUrl()}${path}${qs ? `?${qs}` : ""}`;
+  const search = qs ? `?${qs}` : "";
+  return `${getBaseUrl()}${path}${search}`;
 }
 
 async function request<T>(
@@ -67,8 +68,9 @@ export const apiHelper = {
 
 /** Mengambil pesan galat paling informatif (pesan validasi pertama atau pesan umum). */
 export function getErrorMessage(response: ApiResponse<any>): string {
-  const first = Object.values(response.data ?? {})
+  const data = response.data ?? {};
+  const first = Object.values(data)
     .flat()
-    .find((value) => typeof value === "string");
-  return (first as string | undefined) ?? response.message;
+    .find((value): value is string => typeof value === "string");
+  return first ?? response.message;
 }
