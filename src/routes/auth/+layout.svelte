@@ -1,6 +1,6 @@
 <script lang="ts">
   let { children } = $props();
-  void children;
+  const content = $derived(children);
 </script>
 
-{@render children()}
+{@render content()}
