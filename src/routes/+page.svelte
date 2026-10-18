@@ -3,4 +3,4 @@
 </script>
 
 <svelte:head><title>Semua Kursus · Delcom Courses</title></svelte:head>
-<HomePage />bun run build
+<HomePage />

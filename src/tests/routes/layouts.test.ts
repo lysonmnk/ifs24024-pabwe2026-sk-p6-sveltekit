@@ -11,7 +11,7 @@ const children = createRawSnippet(() => ({
 
 describe("routes/auth/+layout", () => {
   it("merender children apa adanya", () => {
-    render(AuthRouteLayout, { children });
+    render(AuthRouteLayout, { props: { children } });
     expect(screen.getByText("isi halaman")).toBeInTheDocument();
   });
 });
